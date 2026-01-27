@@ -1,0 +1,2 @@
+- Always read and refer to [start.txt](./start.txt) to fully understand what this project rrquires.
+- 
