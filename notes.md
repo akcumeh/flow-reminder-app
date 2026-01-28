@@ -73,3 +73,22 @@ Build a premium reminder app with phone call notifications via Vapi.
 ---
 
 ## Logs
+## Build Log
+
+### Commit 1: Set up Next.js 16 & frontend core
+- Next.js 16 with App Router, TypeScript, Tailwind
+- React Query, Zod, date-fns dependencies installed
+- shadcn/ui foundation (CVA, clsx, tailwind-merge)
+
+### Commit 2: Create backend
+- SQLAlchemy models with Reminder table (status enum: pending/completed/failed)
+- Pydantic schemas with E.164 phone validation
+- CRUD operations isolated from routes
+- Database setup with SQLite
+
+### Commit 3: Complete backend with API routes & scheduler
+- FastAPI REST endpoints (GET/POST/PUT/DELETE /api/reminders)
+- APScheduler triggers reminders at scheduled time
+- Status updates after trigger (completed/failed based on success)
+- CORS configured for Next.js localhost:3000
+
