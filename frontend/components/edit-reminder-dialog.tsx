@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Clock, Calendar } from "lucide-react";
+import { format } from "date-fns";
 import { api } from "@/lib/api";
 import { getUserTimezone } from "@/lib/timezone";
 import {
@@ -19,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import type { Reminder } from "@/lib/types";
 
 const reminderSchema = z.object({
     title: z.string().min(1, "Title is required").max(50, "Title must be 50 characters or less"),
@@ -49,12 +52,13 @@ const reminderSchema = z.object({
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
 
-interface CreateReminderDialogProps {
+interface EditReminderDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    reminder: Reminder;
 }
 
-export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialogProps) {
+export function EditReminderDialog({ open, onOpenChange, reminder }: EditReminderDialogProps) {
     const queryClient = useQueryClient();
     const userTimezone = getUserTimezone();
 
@@ -68,7 +72,10 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
     } = useForm<ReminderFormData>({
         resolver: zodResolver(reminderSchema),
         defaultValues: {
-            timezone: userTimezone,
+            title: reminder.title,
+            message: reminder.message,
+            phone_number: reminder.phone_number,
+            timezone: reminder.timezone || userTimezone,
             use_relative_time: true,
             days: 0,
             hours: 0,
@@ -76,26 +83,39 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
         },
     });
 
+    useEffect(() => {
+        if (open && reminder) {
+            reset({
+                title: reminder.title,
+                message: reminder.message,
+                phone_number: reminder.phone_number,
+                timezone: reminder.timezone || userTimezone,
+                use_relative_time: false,
+                specific_date: format(new Date(reminder.scheduled_time), "yyyy-MM-dd"),
+                specific_time: format(new Date(reminder.scheduled_time), "HH:mm"),
+            });
+        }
+    }, [open, reminder, reset, userTimezone]);
+
     const title = watch("title") || "";
     const message = watch("message") || "";
     const useRelativeTime = watch("use_relative_time");
 
-    const createMutation = useMutation({
-        mutationFn: api.createReminder,
+    const updateMutation = useMutation({
+        mutationFn: (data: any) => api.updateReminder(reminder.id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["reminders"] });
-            toast.success("Reminder created successfully");
-            reset();
+            toast.success("Reminder updated successfully");
             onOpenChange(false);
         },
         onError: (error: Error) => {
-            toast.error(error.message || "Failed to create reminder");
+            toast.error(error.message || "Failed to update reminder");
         },
     });
 
     const onSubmit = (data: ReminderFormData) => {
         if (data.use_relative_time) {
-            createMutation.mutate({
+            updateMutation.mutate({
                 title: data.title,
                 message: data.message,
                 phone_number: data.phone_number,
@@ -106,7 +126,7 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                 minutes: data.minutes || 0,
             });
         } else {
-            createMutation.mutate({
+            updateMutation.mutate({
                 title: data.title,
                 message: data.message,
                 phone_number: data.phone_number,
@@ -121,20 +141,20 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Create New Reminder</DialogTitle>
+                    <DialogTitle>Edit Reminder</DialogTitle>
                     <DialogDescription>
-                        Schedule a phone call reminder. You&apos;ll receive a call at the specified time.
+                        Update your reminder details and reschedule if needed.
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
                     <div>
                         <div className="flex items-center justify-between mb-1">
-                            <Label htmlFor="title">Title</Label>
+                            <Label htmlFor="edit-title">Title</Label>
                             <span className="text-xs text-zinc-500">{title.length}/50</span>
                         </div>
                         <Input
-                            id="title"
+                            id="edit-title"
                             placeholder="Meeting with client"
                             {...register("title")}
                         />
@@ -145,11 +165,11 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
 
                     <div>
                         <div className="flex items-center justify-between mb-1">
-                            <Label htmlFor="message">Message</Label>
+                            <Label htmlFor="edit-message">Message</Label>
                             <span className="text-xs text-zinc-500">{message.length}/500</span>
                         </div>
                         <Textarea
-                            id="message"
+                            id="edit-message"
                             placeholder="Don't forget to prepare the presentation slides"
                             rows={3}
                             {...register("message")}
@@ -160,9 +180,9 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                     </div>
 
                     <div>
-                        <Label htmlFor="phone_number">Phone Number</Label>
+                        <Label htmlFor="edit-phone_number">Phone Number</Label>
                         <Input
-                            id="phone_number"
+                            id="edit-phone_number"
                             type="tel"
                             placeholder="+1234567890"
                             {...register("phone_number")}
@@ -173,9 +193,9 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                     </div>
 
                     <div>
-                        <Label htmlFor="timezone">Timezone</Label>
+                        <Label htmlFor="edit-timezone">Timezone</Label>
                         <Input
-                            id="timezone"
+                            id="edit-timezone"
                             value={userTimezone}
                             disabled
                             className="bg-zinc-50"
@@ -284,9 +304,9 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
 
                                 <div className="grid grid-cols-3 gap-3">
                                     <div>
-                                        <Label htmlFor="days">Days</Label>
+                                        <Label htmlFor="edit-days">Days</Label>
                                         <Input
-                                            id="days"
+                                            id="edit-days"
                                             type="number"
                                             min="0"
                                             placeholder="0"
@@ -296,9 +316,9 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                                         />
                                     </div>
                                     <div>
-                                        <Label htmlFor="hours">Hours</Label>
+                                        <Label htmlFor="edit-hours">Hours</Label>
                                         <Input
-                                            id="hours"
+                                            id="edit-hours"
                                             type="number"
                                             min="0"
                                             max="23"
@@ -309,9 +329,9 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                                         />
                                     </div>
                                     <div>
-                                        <Label htmlFor="minutes">Minutes</Label>
+                                        <Label htmlFor="edit-minutes">Minutes</Label>
                                         <Input
-                                            id="minutes"
+                                            id="edit-minutes"
                                             type="number"
                                             min="0"
                                             max="59"
@@ -326,17 +346,17 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                         ) : (
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <Label htmlFor="specific_date">Date</Label>
+                                    <Label htmlFor="edit-specific_date">Date</Label>
                                     <Input
-                                        id="specific_date"
+                                        id="edit-specific_date"
                                         type="date"
                                         {...register("specific_date")}
                                     />
                                 </div>
                                 <div>
-                                    <Label htmlFor="specific_time">Time</Label>
+                                    <Label htmlFor="edit-specific_time">Time</Label>
                                     <Input
-                                        id="specific_time"
+                                        id="edit-specific_time"
                                         type="time"
                                         {...register("specific_time")}
                                     />
@@ -356,8 +376,8 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={createMutation.isPending}>
-                            {createMutation.isPending ? "Creating..." : "Create Reminder"}
+                        <Button type="submit" disabled={updateMutation.isPending}>
+                            {updateMutation.isPending ? "Updating..." : "Update Reminder"}
                         </Button>
                     </div>
                 </form>

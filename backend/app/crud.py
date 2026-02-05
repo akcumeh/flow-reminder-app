@@ -26,9 +26,16 @@ def get_reminder(db: Session, reminder_id: int) -> Optional[models.Reminder]:
     """Get single reminder by ID"""
     return db.query(models.Reminder).filter(models.Reminder.id == reminder_id).first()
 
-def create_reminder(db: Session, reminder: schemas.ReminderCreate) -> models.Reminder:
+def create_reminder(db: Session, reminder_data: dict) -> models.Reminder:
     """Create new reminder"""
-    db_reminder = models.Reminder(**reminder.model_dump())
+    clean_data = {
+        'title': reminder_data['title'],
+        'message': reminder_data['message'],
+        'phone_number': reminder_data['phone_number'],
+        'scheduled_time': reminder_data['scheduled_time'],
+        'timezone': reminder_data['timezone'],
+    }
+    db_reminder = models.Reminder(**clean_data)
     db.add(db_reminder)
     db.commit()
     db.refresh(db_reminder)

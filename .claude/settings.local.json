@@ -1,8 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx create-next-app:*)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(grep:*)",
+      "Bash(./venv/Scripts/python.exe:*)"
     ]
   },
   "outputStyle": "senior-fe-dev"

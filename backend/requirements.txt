@@ -4,6 +4,6 @@ sqlalchemy==2.0.46
 pydantic==2.12.5
 pydantic-settings==2.12.0
 apscheduler==3.11.2
-# vapi-python==0.1.9
+vapi-python==0.1.9
 python-multipart==0.0.20
 httpx==0.28.1

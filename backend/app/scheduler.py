@@ -5,19 +5,17 @@ from datetime import datetime
 from typing import Optional
 import os
 import logging
-from vapi import Vapi
+import httpx
 
-from .database import SessionLocal
+from .db import SessionLocal
 from .models import Reminder, ReminderStatus
 from . import crud
 
 logger = logging.getLogger(__name__)
 
-# Initialize Vapi client
 VAPI_API_KEY = os.getenv("VAPI_API_KEY")
 VAPI_PHONE_NUMBER_ID = os.getenv("VAPI_PHONE_NUMBER_ID")
-
-vapi_client = Vapi(api_key=VAPI_API_KEY) if VAPI_API_KEY else None
+VAPI_BASE_URL = "https://api.vapi.ai"
 
 # Global scheduler instance
 scheduler = BackgroundScheduler()
@@ -33,18 +31,19 @@ def trigger_reminder_call(reminder_id: int):
         if not reminder:
             logger.error(f"Reminder {reminder_id} not found")
             return
-        
+
         if reminder.status != ReminderStatus.PENDING:
             logger.info(f"Reminder {reminder_id} already processed, skipping")
             return
-        
-        # Make Vapi call
-        if vapi_client and VAPI_PHONE_NUMBER_ID:
+
+        if VAPI_API_KEY and VAPI_PHONE_NUMBER_ID:
             try:
-                call_response = vapi_client.calls.create(
-                    phone_number_id=VAPI_PHONE_NUMBER_ID,
-                    customer_number=reminder.phone_number,
-                    assistant={
+                payload = {
+                    "phoneNumberId": VAPI_PHONE_NUMBER_ID,
+                    "customer": {
+                        "number": reminder.phone_number,
+                    },
+                    "assistant": {
                         "firstMessage": f"Hello! This is your reminder: {reminder.title}. {reminder.message}",
                         "model": {
                             "provider": "openai",
@@ -61,18 +60,32 @@ def trigger_reminder_call(reminder_id: int):
                             "voiceId": "jennifer"
                         }
                     }
-                )
-                
-                logger.info(f"Vapi call initiated for reminder {reminder_id}: {call_response}")
+                }
+
+                headers = {
+                    "Authorization": f"Bearer {VAPI_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+
+                with httpx.Client() as client:
+                    response = client.post(
+                        f"{VAPI_BASE_URL}/call",
+                        json=payload,
+                        headers=headers,
+                        timeout=30.0
+                    )
+                    response.raise_for_status()
+
+                logger.info(f"Vapi call initiated for reminder {reminder_id}")
                 crud.update_reminder_status(db, reminder_id, ReminderStatus.COMPLETED)
-                
+
             except Exception as e:
                 logger.error(f"Vapi call failed for reminder {reminder_id}: {str(e)}")
                 crud.update_reminder_status(db, reminder_id, ReminderStatus.FAILED)
         else:
             logger.warning("Vapi not configured, marking as completed (dev mode)")
             crud.update_reminder_status(db, reminder_id, ReminderStatus.COMPLETED)
-            
+
     except Exception as e:
         logger.error(f"Error processing reminder {reminder_id}: {str(e)}")
         try:

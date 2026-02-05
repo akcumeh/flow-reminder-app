@@ -1,23 +1,44 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLEnum
+from pydantic import BaseModel, Field
 from datetime import datetime
-import enum
-from .database import Base
+from typing import Optional
+from enum import Enum
 
-class ReminderStatus(enum.Enum):
-    """Status of reminder: pending, completed, failed"""
+class ReminderStatus(str, Enum):
     PENDING = "pending"
     COMPLETED = "completed"
     FAILED = "failed"
 
-class Reminder(Base):
-    __tablename__ = "reminders"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(100), nullable=False)
-    message = Column(String(500), nullable=False)
-    phone_number = Column(String(20), nullable=False)
-    scheduled_time = Column(DateTime, nullable=False)
-    timezone = Column(String(50), nullable=False, default="UTC")
-    status = Column(SQLEnum(ReminderStatus), default=ReminderStatus.PENDING)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+class ReminderBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=100)
+    message: str = Field(..., min_length=1, max_length=500)
+    phone_number: str = Field(..., pattern=r"^\+[1-9]\d{10,14}$")
+    timezone: str = "UTC"
+
+class ReminderCreate(ReminderBase):
+    scheduled_time: Optional[str] = None
+    use_relative_time: bool = False
+    days: Optional[int] = None
+    hours: Optional[int] = None
+    minutes: Optional[int] = None
+
+class ReminderUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    message: Optional[str] = Field(None, min_length=1, max_length=500)
+    phone_number: Optional[str] = Field(None, pattern=r"^\+[1-9]\d{10,14}$")
+    scheduled_time: Optional[str] = None
+    timezone: Optional[str] = None
+    status: Optional[ReminderStatus] = None
+    use_relative_time: Optional[bool] = None
+    days: Optional[int] = None
+    hours: Optional[int] = None
+    minutes: Optional[int] = None
+
+class ReminderResponse(ReminderBase):
+    id: int
+    scheduled_time: datetime
+    status: ReminderStatus
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

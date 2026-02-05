@@ -56,6 +56,15 @@ export function ReminderList({ reminders, isLoading }: ReminderListProps) {
 
               <p className="text-zinc-600 mb-4">{reminder.message}</p>
 
+              {reminder.status === "pending" && (
+                <div className="mb-3 text-sm font-medium text-blue-600">
+                  {formatDistanceToNow(
+                    new Date(reminder.scheduled_time.endsWith('Z') ? reminder.scheduled_time : reminder.scheduled_time + 'Z'),
+                    { addSuffix: true }
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-4 text-sm text-zinc-500">
                 <div className="flex items-center gap-1.5">
                   <Phone className="h-4 w-4" />
@@ -63,9 +72,10 @@ export function ReminderList({ reminders, isLoading }: ReminderListProps) {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4" />
-                  {formatDistanceToNow(new Date(reminder.scheduled_time), {
-                    addSuffix: true,
-                  })}
+                  {formatDistanceToNow(
+                    new Date(reminder.scheduled_time.endsWith('Z') ? reminder.scheduled_time : reminder.scheduled_time + 'Z'),
+                    { addSuffix: true }
+                  )}
                 </div>
               </div>
             </div>

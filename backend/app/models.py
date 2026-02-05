@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLEnum
 from datetime import datetime
 import enum
-from .database import Base
+from .db import Base
 
 class ReminderStatus(enum.Enum):
     """Status of reminder: pending, completed, failed"""

@@ -16,8 +16,12 @@ export interface ReminderCreate {
     title: string;
     message: string;
     phone_number: string;
-    scheduled_time: string;
     timezone: string;
+    use_relative_time: boolean;
+    days?: number;
+    hours?: number;
+    minutes?: number;
+    scheduled_time?: string;
 }
 
 export interface ReminderUpdate {
