@@ -2,17 +2,19 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Clock, CheckCircle2, XCircle, List } from "lucide-react";
+import { Plus, Clock, CheckCircle2, XCircle, List, Search } from "lucide-react";
 import Image from "next/image";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ReminderList } from "@/components/reminder-list";
 import { CreateReminderDialog } from "@/components/create-reminder-dialog";
 import type { ReminderStatus } from "@/lib/types";
 
 export default function Dashboard() {
     const [statusFilter, setStatusFilter] = useState<ReminderStatus | "all">("all");
+    const [searchQuery, setSearchQuery] = useState("");
     const [isCreateOpen, setIsCreateOpen] = useState(false);
 
     const { data: reminders = [], isLoading } = useQuery({
@@ -21,9 +23,26 @@ export default function Dashboard() {
     });
 
     const filteredReminders = useMemo(() => {
-        if (statusFilter === "all") return reminders;
-        return reminders.filter(r => r.status === statusFilter);
-    }, [reminders, statusFilter]);
+        let results = statusFilter === "all"
+            ? reminders
+            : reminders.filter(r => r.status === statusFilter);
+
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            results = results.filter(r =>
+                r.title.toLowerCase().includes(query) ||
+                r.message.toLowerCase().includes(query) ||
+                r.phone_number.includes(query)
+            );
+        }
+
+        return results.sort((a, b) => {
+            if (a.status === "pending" && b.status === "pending") {
+                return new Date(a.scheduled_time).getTime() - new Date(b.scheduled_time).getTime();
+            }
+            return new Date(b.scheduled_time).getTime() - new Date(a.scheduled_time).getTime();
+        });
+    }, [reminders, statusFilter, searchQuery]);
 
     const stats = useMemo(() => {
         return {
@@ -49,6 +68,18 @@ export default function Dashboard() {
                     </div>
                     <p className="text-zinc-600 mt-1">Schedule phone call reminders</p>
                 </header>
+
+                <div className="mb-6">
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                        <Input
+                            placeholder="Search reminders..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9"
+                        />
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     <Card

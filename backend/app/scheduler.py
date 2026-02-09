@@ -1,7 +1,9 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Optional
 import os
 import logging
@@ -124,10 +126,41 @@ def unschedule_reminder(reminder_id: int):
         scheduler.remove_job(job_id)
         logger.info(f"Unscheduled reminder {reminder_id}")
 
+def check_overdue_reminders():
+    """
+    Periodic job that marks past-due pending reminders as failed.
+    Runs every minute to catch missed reminders.
+    """
+    db: Session = SessionLocal()
+    try:
+        now_utc = datetime.now(ZoneInfo("UTC"))
+        reminders = db.query(Reminder).filter(
+            Reminder.status == ReminderStatus.PENDING,
+            Reminder.scheduled_time < now_utc
+        ).all()
+
+        for reminder in reminders:
+            logger.warning(f"Reminder {reminder.id} is overdue, marking as failed")
+            crud.update_reminder_status(db, reminder.id, ReminderStatus.FAILED)
+            unschedule_reminder(reminder.id)
+    except Exception as e:
+        logger.error(f"Error checking overdue reminders: {str(e)}")
+    finally:
+        db.close()
+
 def start_scheduler():
     """Start the scheduler (called on app startup)"""
     if not scheduler.running:
         scheduler.start()
+
+        scheduler.add_job(
+            check_overdue_reminders,
+            trigger=IntervalTrigger(minutes=1),
+            id="check_overdue",
+            name="Check overdue reminders",
+            replace_existing=True
+        )
+
         logger.info("APScheduler started")
 
 def shutdown_scheduler():

@@ -188,11 +188,10 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                             <button
                                 type="button"
                                 onClick={() => setValue("use_relative_time", true)}
-                                className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${
-                                    useRelativeTime
+                                className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${useRelativeTime
                                         ? "border-blue-600 bg-blue-50 text-blue-700"
                                         : "border-zinc-300 hover:bg-zinc-50"
-                                }`}
+                                    }`}
                             >
                                 <Clock className="h-4 w-4" />
                                 In...
@@ -200,11 +199,10 @@ export function CreateReminderDialog({ open, onOpenChange }: CreateReminderDialo
                             <button
                                 type="button"
                                 onClick={() => setValue("use_relative_time", false)}
-                                className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${
-                                    !useRelativeTime
+                                className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${!useRelativeTime
                                         ? "border-blue-600 bg-blue-50 text-blue-700"
                                         : "border-zinc-300 hover:bg-zinc-50"
-                                }`}
+                                    }`}
                             >
                                 <Calendar className="h-4 w-4" />
                                 Specific date

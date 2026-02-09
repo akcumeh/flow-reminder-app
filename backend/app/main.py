@@ -156,6 +156,11 @@ def update_reminder(
         if key not in ['use_relative_time', 'days', 'hours', 'minutes']:
             setattr(db_reminder, key, value)
 
+    if 'scheduled_time' in reminder_data:
+        now_utc = datetime.now(ZoneInfo("UTC"))
+        if reminder_data['scheduled_time'] > now_utc and db_reminder.status in [models.ReminderStatus.FAILED, models.ReminderStatus.COMPLETED]:
+            db_reminder.status = models.ReminderStatus.PENDING
+
     db_reminder.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(db_reminder)

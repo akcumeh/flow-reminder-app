@@ -76,12 +76,7 @@ Frontend runs at `http://localhost:3000`
 
 ### Scheduling
 - APScheduler runs in-process with the FastAPI server
-- When you create a reminder, a job is scheduled for the specified time
-- At trigger time, the scheduler calls Vapi to initiate the phone call
-
-### Status Updates
-- Reminders start with `pending` status
-- After successful Vapi call trigger: `completed`
+- When you create a reminder, a job is scheduled for the specified time. At trigger time, the scheduler calls Vapi to initiate the phone call. Reminders start with `pending` status and change to `completed` after successfullypy Vapi call trigger: 
 - If Vapi call fails: `failed`
 
 ### Timezone Handling
@@ -91,10 +86,13 @@ Frontend runs at `http://localhost:3000`
 
 ## Quick Test Flow
 
-1. Open `http://localhost:3000` in your browser
-2. Click "New Reminder"
-3. Fill in the form with a title, message body, your phone number in E.164 format (i.e. with country code, e.g. +1234567890), set time either using presets, enter a custom time, or choose a specific date and time
-4. Submit and wait for the call at the scheduled time
+1. Start both servers:
+- 
+2. Open `http://localhost:3000` and click "Go to Reminders"
+3. Click "New Reminder", fill Title/Message/Phone (+1234567890), click "5 min" preset
+4. Submit - reminder appears with countdown
+5. At 5 minutes: phone rings (with Vapi credentials) or auto-completes (dev mode)
+6. Test search bar, click stat cards to filter, edit/delete reminders
 
 ## API Endpoints
 

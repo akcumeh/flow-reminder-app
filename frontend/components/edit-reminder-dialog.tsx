@@ -48,6 +48,15 @@ const reminderSchema = z.object({
 }, {
     message: "Please select a time for your reminder",
     path: ["use_relative_time"],
+}).refine((data) => {
+    if (!data.use_relative_time && data.specific_date && data.specific_time) {
+        const scheduledDateTime = new Date(`${data.specific_date}T${data.specific_time}`);
+        return scheduledDateTime > new Date();
+    }
+    return true;
+}, {
+    message: "Please enter a future time/date",
+    path: ["specific_date"],
 });
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
@@ -85,14 +94,16 @@ export function EditReminderDialog({ open, onOpenChange, reminder }: EditReminde
 
     useEffect(() => {
         if (open && reminder) {
+            const scheduledDate = new Date(reminder.scheduled_time.endsWith('Z') ? reminder.scheduled_time : reminder.scheduled_time + 'Z');
+
             reset({
                 title: reminder.title,
                 message: reminder.message,
                 phone_number: reminder.phone_number,
                 timezone: reminder.timezone || userTimezone,
                 use_relative_time: false,
-                specific_date: format(new Date(reminder.scheduled_time), "yyyy-MM-dd"),
-                specific_time: format(new Date(reminder.scheduled_time), "HH:mm"),
+                specific_date: format(scheduledDate, "yyyy-MM-dd"),
+                specific_time: format(scheduledDate, "HH:mm"),
             });
         }
     }, [open, reminder, reset, userTimezone]);
@@ -208,11 +219,10 @@ export function EditReminderDialog({ open, onOpenChange, reminder }: EditReminde
                             <button
                                 type="button"
                                 onClick={() => setValue("use_relative_time", true)}
-                                className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${
-                                    useRelativeTime
+                                className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${useRelativeTime
                                         ? "border-blue-600 bg-blue-50 text-blue-700"
                                         : "border-zinc-300 hover:bg-zinc-50"
-                                }`}
+                                    }`}
                             >
                                 <Clock className="h-4 w-4" />
                                 In...
@@ -220,11 +230,10 @@ export function EditReminderDialog({ open, onOpenChange, reminder }: EditReminde
                             <button
                                 type="button"
                                 onClick={() => setValue("use_relative_time", false)}
-                                className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${
-                                    !useRelativeTime
+                                className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${!useRelativeTime
                                         ? "border-blue-600 bg-blue-50 text-blue-700"
                                         : "border-zinc-300 hover:bg-zinc-50"
-                                }`}
+                                    }`}
                             >
                                 <Calendar className="h-4 w-4" />
                                 Specific date
@@ -366,6 +375,9 @@ export function EditReminderDialog({ open, onOpenChange, reminder }: EditReminde
                         {errors.use_relative_time && (
                             <p className="text-sm text-red-600 mt-1">{errors.use_relative_time.message}</p>
                         )}
+                        {errors.specific_date && (
+                            <p className="text-sm text-red-600 mt-1">{errors.specific_date.message}</p>
+                        )}
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4">
@@ -376,7 +388,10 @@ export function EditReminderDialog({ open, onOpenChange, reminder }: EditReminde
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={updateMutation.isPending}>
+                        <Button
+                            type="submit"
+                            disabled={updateMutation.isPending || Object.keys(errors).length > 0}
+                        >
                             {updateMutation.isPending ? "Updating..." : "Update Reminder"}
                         </Button>
                     </div>
